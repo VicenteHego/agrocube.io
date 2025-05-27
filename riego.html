@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riego - Agrocube</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    {% include 'header.html' %}
+
+    <div class="riego-container">
+        <h2>Control de Riego</h2>
+
+        <!-- Sensor de Humedad (Sincronizado) -->
+        <div class="sensor-humedad" id="sensorHumedadRiego" style="--humedad: 0;">
+            <div class="centro" id="humedadRiegoValor">0%</div>
+        </div>
+        <p><strong>Humedad del Suelo:</strong> <span id="humedadRiegoValue">0%</span></p>
+
+        <!-- Barra de Carga -->
+        <div class="bar-container">
+            <div class="bar" id="bar"></div>
+        </div>
+
+        <button onclick="iniciarRiego()">Iniciar Riego</button>
+        <p id="estadoRiego">Riego no iniciado</p>
+    </div>
+
+    <script>
+        let riegoEnProgreso = false;
+        let humedadRiego = 0;
+
+        function iniciarRiego() {
+            if (!riegoEnProgreso) {
+                riegoEnProgreso = true;
+                let interval = setInterval(() => {
+                    if (humedadRiego < 100) {
+                        humedadRiego++;
+                        document.getElementById('bar').style.width = `${humedadRiego}%`;
+                        document.getElementById('sensorHumedadRiego').style.setProperty('--humedad', humedadRiego);
+                        document.getElementById('humedadRiegoValor').innerText = `${humedadRiego}%`;
+                        document.getElementById('humedadRiegoValue').innerText = `${humedadRiego}%`;
+                    } else {
+                        clearInterval(interval);
+                        document.getElementById('estadoRiego').innerText = "Riego listo";
+                    }
+                }, 100);
+            }
+        }
+    </script>
+</body>
+</html>
