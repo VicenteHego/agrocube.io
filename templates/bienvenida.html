@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Agrocube - Página de Inicio</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.10/css/weather-icons.min.css" />
+</head>
+<body>
+  {% include 'header.html' %}
+
+  <div class="inicio-container">
+    <h2>Bienvenido a Agrocube</h2>
+    
+    <!-- Datos actuales -->
+    <div id="clima-info" style="margin-bottom: 20px;">
+      <p><strong>🌡️ Temperatura actual:</strong> <span id="temperatura-actual"></span> °C</p>
+      <p><strong>💨 Viento:</strong> <span id="viento-actual"></span> km/h</p>
+      <p><strong>💧 Humedad:</strong> <span id="humedad-actual"></span> %</p>
+    </div>
+
+    <!-- Carrusel -->
+    <div class="carrusel-clima">
+      <ul id="carrusel-pronostico"></ul>
+    </div>
+
+    <!-- Mapa -->
+    <div id="map" style="height: 400px; width: 100%; margin-top: 20px;"></div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+      function obtenerUbicacion() {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(function (position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+
+            const map = L.map('map').setView([lat, lon], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            L.marker([lat, lon]).addTo(map).bindPopup('Estás aquí').openPopup();
+
+            obtenerClima(lat, lon);
+          }, function () {
+            alert('No se pudo obtener la ubicación.');
+          });
+        } else {
+          alert('Tu navegador no soporta geolocalización.');
+        }
+      }
+
+      function obtenerClima(lat, lon) {
+        fetch('/obtener_clima', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ latitude: lat, longitude: lon })
+        })
+        .then(response => response.json())
+        .then(data => {
+          const tempActual = document.getElementById('temperatura-actual');
+          const vientoActual = document.getElementById('viento-actual');
+          const humedadActual = document.getElementById('humedad-actual');
+          const carruselPronostico = document.getElementById('carrusel-pronostico');
+
+          tempActual.textContent = data.current_weather.temperature;
+          vientoActual.textContent = data.daily.windspeed_10m_max[0];
+          humedadActual.textContent = data.daily.relative_humidity_2m_mean[0];
+
+          const fechas = data.daily.time;
+          const tempMax = data.daily.temperature_2m_max;
+          const tempMin = data.daily.temperature_2m_min;
+          const precipitacion = data.daily.precipitation_sum;
+          const nubosidad = data.daily.cloudcover_mean;
+          const viento = data.daily.windspeed_10m_max;
+
+          carruselPronostico.innerHTML = '';
+
+          for (let i = 0; i < 3; i++) {
+            let iconoClima = '';
+            if (nubosidad[i] < 30) {
+              iconoClima = 'wi-day-sunny';
+            } else if (nubosidad[i] < 70) {
+              iconoClima = 'wi-day-cloudy';
+            } else {
+              iconoClima = 'wi-day-rain';
+            }
+
+            const item = document.createElement('li');
+            item.innerHTML = `<strong>${fechas[i]}</strong>: <i class="wi ${iconoClima}"></i> 🌡️ Max: ${tempMax[i]}°C, Min: ${tempMin[i]}°C, 🌧️ ${precipitacion[i]} mm, ☁️ ${nubosidad[i]}%, 💨 ${viento[i]} km/h`;
+            carruselPronostico.appendChild(item);
+          }
+        })
+        .catch(error => {
+          console.error('Error al obtener el clima:', error);
+        });
+      }
+
+      window.onload = obtenerUbicacion;
+    </script>
+  </div>
+</body>
+</html>

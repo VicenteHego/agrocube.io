@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoreo - Agrocube</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .alertas {
+            background-color: #ffe5e5;
+            color: #d8000c;
+            border: 1px solid #d8000c;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    {% include 'header.html' %}
+
+    <div class="monitoreo-container">
+        <h2>Monitoreo de Sensores</h2>
+
+        <!-- Contenedor de alertas -->
+        <div id="alertas" class="alertas"></div>
+
+        <div class="sensor-container">
+            <!-- Termómetro para la temperatura -->
+            <div class="sensor-temperatura" id="sensorTemperatura" style="--temperatura: 50;">
+                <div class="centro" id="temperaturaValor">50°C</div>
+            </div>
+            <p><strong>Temperatura Ambiente:</strong> <span id="tempValue">--</span>°C</p>
+
+            <!-- Sensor de Humedad Circular -->
+            <div class="sensor-humedad" id="sensorHumedad" style="--humedad: 50;">
+                <div class="centro" id="humedadValor">50%</div>
+            </div>
+            <p><strong>Humedad del Suelo:</strong> <span id="humedadValue">--</span>%</p>
+        </div>
+    </div>
+
+    <script>
+        function mostrarAlertas(alertas) {
+            const alertDiv = document.getElementById('alertas');
+            if (alertas.length > 0) {
+                alertDiv.style.display = 'block';
+                alertDiv.innerHTML = alertas.join("<br>");
+            } else {
+                alertDiv.style.display = 'none';
+                alertDiv.innerHTML = "";
+            }
+        }
+
+        function obtenerDatosReales() {
+            fetch('/datos')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        mostrarAlertas(["Error al obtener datos del sensor"]);
+                        return;
+                    }
+
+                    let temp = parseFloat(data.temperatura);
+                    let humedadAire = parseFloat(data.humedad_aire);
+                    let humedadSuelo = parseFloat(data.humedad_suelo);
+
+                    document.getElementById('tempValue').innerText = temp;
+                    document.getElementById('humedadValue').innerText = humedadSuelo;
+
+                    document.getElementById('sensorTemperatura').style.setProperty('--temperatura', (temp - 20) * 2);
+                    document.getElementById('temperaturaValor').innerText = `${temp}°C`;
+
+                    document.getElementById('sensorHumedad').style.setProperty('--humedad', humedadSuelo);
+                    document.getElementById('humedadValor').innerText = `${humedadSuelo}%`;
+
+                    let alertas = [];
+
+                    if (temp < 15) {
+                        alertas.push("⚠️ Temperatura muy baja (< 15°C)");
+                    } else if (temp > 35) {
+                        alertas.push("⚠️ Temperatura muy alta (> 35°C)");
+                    }
+
+                    if (humedadSuelo < 30) {
+                        alertas.push("⚠️ Humedad del suelo baja (< 30%)");
+                    }
+
+                    mostrarAlertas(alertas);
+                })
+                .catch(error => {
+                    mostrarAlertas(["Error al obtener datos del sensor"]);
+                    console.error("Fetch error:", error);
+                });
+        }
+
+        setInterval(obtenerDatosReales, 3000); // cada 3 segundos
+        obtenerDatosReales(); // llamada inicial
+    </script>
+</body>
+</html>
